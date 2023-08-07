@@ -1,0 +1,76 @@
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: 'JAVA_HOME'
+    value: '/usr/lib/jvm/java-11-openjdk-amd64'
+
+stages:
+  - stage: build
+    displayName: 'Build and Publish Artifacts'
+    jobs:
+      - job: build
+        displayName: 'Build and Publish'
+        steps:
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y openjdk-11-jdk
+              java -version
+            displayName: 'Install JDK 11'
+
+          - script: |
+              mvn clean package -Dmaven.test.skip=true
+            displayName: 'Build project'
+
+          - task: CopyFiles@2
+            inputs:
+              sourceFolder: '$(System.DefaultWorkingDirectory)/target'
+              contents: '**/*.jar'
+              targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+          - publish: '$(Build.ArtifactStagingDirectory)'
+            artifact: 'JavaPath'
+
+  - stage: sonar
+    displayName: Sonar Analysis
+    jobs:
+      - job: sonar
+        displayName: Sonar
+        steps:
+          - task: SonarQubePrepare@4
+            inputs:
+              SonarQube: 'sonarqube'
+              scannerMode: 'Maven'
+              projectKey: 'sonar-ci-project'
+              projectName: 'sonar ci project'
+              extraProperties: |
+                sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/**/coverage.opencover.xml
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'SonarQube'
+              reportDirectory: '$(Agent.TempDirectory)'
+
+      - task: SonarQubeAnalyze@4
+        inputs:
+          SonarQube: 'sonarqube'
+          projectKey: 'sonar-ci-project'
+          projectName: 'sonar ci project'
+          scannerMode: 'Maven'
+          javaHome: '$(JAVA_HOME)'
+
+      - task: SonarQubePublish@4
+        inputs:
+          SonarQube: 'sonarqube'
+          projectKey: 'sonar-ci-project'
+          projectName: 'sonar ci project'
+          scannerMode: 'Maven'
+          javaHome: '$(JAVA_HOME)'
+          analysisReportPaths: '$(Build.ArtifactStagingDirectory)/sonar/report-task.xml'
+
