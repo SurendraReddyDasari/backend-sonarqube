@@ -57,20 +57,5 @@ stages:
               codeCoverageTool: 'SonarQube'
               reportDirectory: '$(Agent.TempDirectory)'
 
-      - task: SonarQubeAnalyze@4
-        inputs:
-          SonarQube: 'sonarqube'
-          projectKey: 'sonar-ci-project'
-          projectName: 'sonar ci project'
-          scannerMode: 'Maven'
-          javaHome: '$(JAVA_HOME)'
 
-      - task: SonarQubePublish@4
-        inputs:
-          SonarQube: 'sonarqube'
-          projectKey: 'sonar-ci-project'
-          projectName: 'sonar ci project'
-          scannerMode: 'Maven'
-          javaHome: '$(JAVA_HOME)'
-          analysisReportPaths: '$(Build.ArtifactStagingDirectory)/sonar/report-task.xml'
 
